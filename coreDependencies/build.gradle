@@ -1,5 +1,8 @@
 repositories {
     ivy(ivyrepo)
+    mavenCentral()
+    jcenter()
+    maven { url "https://dl.bintray.com/arrow-kt/arrow-kt/" }
 }
 
 configurations {
@@ -31,6 +34,8 @@ dependencies {
     compile kotlinPluginDependency()
     compile intellijCoreAnalysis()
     compile "teamcity:kotlin-ide-common:$bundled_kotlin_compiler_version"
+    implementation "io.arrow-kt:arrow-core-data:0.10.4"
+    implementation "io.arrow-kt:arrow-syntax:0.10.4"
 }
 
 shadowJar {

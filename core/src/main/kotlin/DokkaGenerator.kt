@@ -1,11 +1,14 @@
 package org.jetbrains.dokka
 
+import arrow.core.Validated
+import arrow.core.identity
 import org.jetbrains.dokka.analysis.AnalysisEnvironment
 import org.jetbrains.dokka.analysis.DokkaResolutionFacade
 import org.jetbrains.dokka.model.Module
 import org.jetbrains.dokka.pages.PlatformData
 import org.jetbrains.dokka.plugability.DokkaContext
 import org.jetbrains.dokka.plugability.single
+import org.jetbrains.dokka.postProcess.PostProcess
 import org.jetbrains.dokka.renderers.FileWriter
 import org.jetbrains.dokka.utilities.DokkaLogger
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
@@ -57,6 +60,9 @@ class DokkaGenerator(
             .invoke(fileWriter, locationProvider, context)
 
         renderer.render(transformedPages)
+
+        logger.debug("Run PostProcesses")
+        context[CoreExtensions.postProcess].compute(configuration, context).accumulateErrors()
     }
 
     private fun createEnvironmentAndFacade(pass: DokkaConfiguration.PassConfiguration): EnvironmentAndFacade =
@@ -104,6 +110,26 @@ class DokkaGenerator(
 
         override fun hasErrors() = seenErrors
     }
+
+    private fun List<PostProcess>.compute(
+        conf: DokkaConfiguration,
+        ctx: DokkaContext
+    ): Map<String, Validated<Throwable, Unit>> =
+        map {
+            it.name to try {
+                Validated.Valid(it.run(conf, ctx))
+            } catch (exp: Throwable) {
+                Validated.Invalid(exp)
+            }
+        }.toMap()
+
+    private fun Map<String, Validated<Throwable, Unit>>.accumulateErrors(): Unit =
+        forEach { process, result ->
+            result.fold({ error ->
+                println("PostProcess:$process throws Error message: ${error.message} with StackTrace:\n")
+                error.printStackTrace(System.out)
+            }, ::identity)
+        }
 }
 
 // It is not data class due to ill-defined equals
