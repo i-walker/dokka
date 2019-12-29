@@ -1,7 +1,6 @@
 package org.jetbrains.dokka
 
-import arrow.core.Validated
-import arrow.core.identity
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.dokka.analysis.AnalysisEnvironment
 import org.jetbrains.dokka.analysis.DokkaResolutionFacade
 import org.jetbrains.dokka.model.Module
@@ -62,7 +61,7 @@ class DokkaGenerator(
         renderer.render(transformedPages)
 
         logger.debug("Run PostProcesses")
-        context[CoreExtensions.postProcess].compute(configuration, context).accumulateErrors()
+        runBlocking { context[CoreExtensions.postProcess].compute(configuration, context) }
     }
 
     private fun createEnvironmentAndFacade(pass: DokkaConfiguration.PassConfiguration): EnvironmentAndFacade =
@@ -70,7 +69,7 @@ class DokkaGenerator(
             if (analysisPlatform == Platform.jvm) {
                 addClasspath(PathUtil.getJdkClassesRootsFromCurrentJre())
             }
-            pass.classpath.forEach { addClasspath(File(it)) }
+            pass.classpath.forEach { addClasspath(File(it.path)) }
 
             addSources(pass.sourceRoots.map { it.path })
 
@@ -111,24 +110,18 @@ class DokkaGenerator(
         override fun hasErrors() = seenErrors
     }
 
-    private fun List<PostProcess>.compute(
+    private suspend fun List<PostProcess>.compute(
         conf: DokkaConfiguration,
         ctx: DokkaContext
-    ): Map<String, Validated<Throwable, Unit>> =
-        map {
-            it.name to try {
-                Validated.Valid(it.run(conf, ctx))
+    ): Unit =
+        forEach {
+            try {
+                println("\nPostProcess:${it.name} starts\n")
+                it.run(conf, ctx)
             } catch (exp: Throwable) {
-                Validated.Invalid(exp)
+                println("\nPostProcess:${it.name} throws errors!\n")
+                exp.printStackTrace(System.out)
             }
-        }.toMap()
-
-    private fun Map<String, Validated<Throwable, Unit>>.accumulateErrors(): Unit =
-        forEach { process, result ->
-            result.fold({ error ->
-                println("PostProcess:$process throws Error message: ${error.message} with StackTrace:\n")
-                error.printStackTrace(System.out)
-            }, ::identity)
         }
 }
 

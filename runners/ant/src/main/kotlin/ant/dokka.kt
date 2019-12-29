@@ -10,7 +10,7 @@ import org.jetbrains.dokka.DokkaConfiguration.ExternalDocumentationLink
 import org.jetbrains.dokka.utilities.DokkaLogger
 import java.io.File
 
-class AntLogger(val task: Task): DokkaLogger {
+class AntLogger(val task: Task) : DokkaLogger {
     override fun debug(message: String) = task.log(message, Project.MSG_DEBUG)
     override fun info(message: String) = task.log(message, Project.MSG_VERBOSE)
     override fun progress(message: String) = task.log(message, Project.MSG_INFO)
@@ -30,9 +30,10 @@ class TextProperty(var value: String = "")
 
 class AntPassConfig(task: Task) : DokkaConfiguration.PassConfiguration {
     override var moduleName: String = ""
-    override val classpath: List<String>
-        get() = buildClassPath.list().toList()
-
+    override val classpath: List<File>
+        get() = buildClassPath.list().map {File(it)}
+    override val runtimeClassPath: List<File>
+        get() = classpath
     override val sourceRoots: List<DokkaConfiguration.SourceRoot>
         get() = sourcePath.list().map { SourceRootImpl(it) } + antSourceRoots.mapNotNull { it.toSourceRoot() }
 
@@ -83,10 +84,12 @@ class AntPassConfig(task: Task) : DokkaConfiguration.PassConfiguration {
         get() {
             val links = mutableListOf<DokkaConfiguration.ExternalDocumentationLink>()
             if (!noJdkLink)
-                links += DokkaConfiguration.ExternalDocumentationLink.Builder("https://docs.oracle.com/javase/$jdkVersion/docs/api/").build()
+                links += DokkaConfiguration.ExternalDocumentationLink.Builder("https://docs.oracle.com/javase/$jdkVersion/docs/api/")
+                    .build()
 
             if (!noStdlibLink)
-                links += DokkaConfiguration.ExternalDocumentationLink.Builder("https://kotlinlang.org/api/latest/jvm/stdlib/").build()
+                links += DokkaConfiguration.ExternalDocumentationLink.Builder("https://kotlinlang.org/api/latest/jvm/stdlib/")
+                    .build()
             return links
         }
 
@@ -109,10 +112,10 @@ class AntPassConfig(task: Task) : DokkaConfiguration.PassConfiguration {
 
     fun createPackageOptions(): AntPackageOptions = AntPackageOptions().apply { perPackageOptions.add(this) }
 
-    fun createSourceRoot(): AntSourceRoot = AntSourceRoot().apply {  antSourceRoots.add(this) }
+    fun createSourceRoot(): AntSourceRoot = AntSourceRoot().apply { antSourceRoots.add(this) }
 
     fun createTarget(): TextProperty = TextProperty().apply {
-            buildTargets.add(this)
+        buildTargets.add(this)
     }
 
     fun setClasspathRef(ref: Reference) {
@@ -139,13 +142,14 @@ class AntPassConfig(task: Task) : DokkaConfiguration.PassConfiguration {
 }
 
 class AntPackageOptions(
-        override var prefix: String = "",
-        override var includeNonPublic: Boolean = false,
-        override var reportUndocumented: Boolean = true,
-        override var skipDeprecated: Boolean = false,
-        override var suppress: Boolean = false) : DokkaConfiguration.PackageOptions
+    override var prefix: String = "",
+    override var includeNonPublic: Boolean = false,
+    override var reportUndocumented: Boolean = true,
+    override var skipDeprecated: Boolean = false,
+    override var suppress: Boolean = false
+) : DokkaConfiguration.PackageOptions
 
-class DokkaAntTask: Task(), DokkaConfiguration {
+class DokkaAntTask : Task(), DokkaConfiguration {
 
     override var format: String = "html"
     override var generateIndexPages: Boolean = false

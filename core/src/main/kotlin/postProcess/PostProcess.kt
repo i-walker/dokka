@@ -9,5 +9,5 @@ import org.jetbrains.dokka.plugability.DokkaContext
  */
 interface PostProcess {
     val name: String
-    fun run(config: DokkaConfiguration, ctx: DokkaContext): Unit
+    suspend fun run(config: DokkaConfiguration, ctx: DokkaContext): Unit
 }

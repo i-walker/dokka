@@ -5,5 +5,5 @@ import org.jetbrains.dokka.plugability.DokkaContext
 
 object DefaultPostProcess : PostProcess {
     override val name: String = "DefaultPostProcess"
-    override fun run(config: DokkaConfiguration, ctx: DokkaContext): Unit = Unit
+    override suspend fun run(config: DokkaConfiguration, ctx: DokkaContext): Unit = Unit
 }

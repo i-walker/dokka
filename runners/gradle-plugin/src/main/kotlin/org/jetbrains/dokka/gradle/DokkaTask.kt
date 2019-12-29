@@ -5,6 +5,7 @@ import org.gradle.api.*
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.plugins.DslObject
+import org.gradle.api.internal.tasks.DefaultSourceSetContainer
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.tasks.*
 import org.jetbrains.dokka.DokkaBootstrap
@@ -16,6 +17,7 @@ import org.jetbrains.dokka.ReflectDsl
 import org.jetbrains.dokka.ReflectDsl.isNotInstance
 import org.jetbrains.dokka.gradle.ConfigurationExtractor.PlatformData
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import java.io.File
 import java.net.URLClassLoader
 import java.util.concurrent.Callable
@@ -80,14 +82,18 @@ open class DokkaTask : DefaultTask() {
     fun configuration(action: Action<in GradlePassConfigurationImpl>) = action.execute(configuration)
 
 
-    private val kotlinTasks: List<Task> by lazy { extractKotlinCompileTasks(configuration.collectKotlinTasks ?: { defaultKotlinTasks() }) }
+    private val kotlinTasks: List<Task> by lazy {
+        extractKotlinCompileTasks(
+            configuration.collectKotlinTasks ?: { defaultKotlinTasks() })
+    }
 
     private val configExtractor = ConfigurationExtractor(project)
 
     @Input
     var disableAutoconfiguration: Boolean = false
 
-    private var outputDiagnosticInfo: Boolean = false // Workaround for Gradle, which fires some methods (like collectConfigurations()) multiple times in its lifecycle
+    private var outputDiagnosticInfo: Boolean =
+        false // Workaround for Gradle, which fires some methods (like collectConfigurations()) multiple times in its lifecycle
 
     private fun tryResolveFatJar(configuration: Configuration?): Set<File> {
         return try {
@@ -110,7 +116,9 @@ open class DokkaTask : DefaultTask() {
 
         val taskContainer = project.tasks
 
-        val tasksByPath = paths.map { taskContainer.findByPath(it as String) ?: throw IllegalArgumentException("Task with path '$it' not found") }
+        val tasksByPath = paths.map {
+            taskContainer.findByPath(it as String) ?: throw IllegalArgumentException("Task with path '$it' not found")
+        }
 
         other
             .filter { it !is Task || it isNotInstance getAbstractKotlinCompileFor(it) }
@@ -124,11 +132,14 @@ open class DokkaTask : DefaultTask() {
         return (tasksByPath + other) as List<Task>
     }
 
-    private fun Iterable<File>.toSourceRoots(): List<GradleSourceRootImpl> = this.filter { it.exists() }.map { GradleSourceRootImpl().apply { path = it.path } }
-    private fun Iterable<String>.toProjects(): List<Project> = project.subprojects.toList().filter { this.contains(it.name) }
+    private fun Iterable<File>.toSourceRoots(): List<GradleSourceRootImpl> =
+        this.filter { it.exists() }.map { GradleSourceRootImpl().apply { path = it.path } }
+
+    private fun Iterable<String>.toProjects(): List<Project> =
+        project.subprojects.toList().filter { this.contains(it.name) }
 
     private fun collectSuppressedFiles(sourceRoots: List<SourceRoot>) =
-        if(project.isAndroidProject()) {
+        if (project.isAndroidProject()) {
             val generatedRoot = project.buildDir.resolve("generated").absoluteFile
             sourceRoots
                 .map { File(it.path) }
@@ -147,7 +158,8 @@ open class DokkaTask : DefaultTask() {
         try {
             loadFatJar()
 
-            val bootstrapClass = ClassloaderContainer.fatJarClassLoader!!.loadClass("org.jetbrains.dokka.DokkaBootstrapImpl")
+            val bootstrapClass =
+                ClassloaderContainer.fatJarClassLoader!!.loadClass("org.jetbrains.dokka.DokkaBootstrapImpl")
             val bootstrapInstance = bootstrapClass.constructors.first().newInstance()
             val bootstrapProxy: DokkaBootstrap =
                 automagicTypedProxy(javaClass.classLoader, bootstrapInstance)
@@ -211,8 +223,10 @@ open class DokkaTask : DefaultTask() {
             ?.let { mergeUserConfigurationAndPlatformData(userConfig, it) }
                 ?: if (this.isMultiplatformProject()) {
                     if (outputDiagnosticInfo)
-                        logger.warn("Could not find target with name: ${userConfig.name} in Kotlin Gradle Plugin, " +
-                                "using only user provided configuration for this target")
+                        logger.warn(
+                            "Could not find target with name: ${userConfig.name} in Kotlin Gradle Plugin, " +
+                                    "using only user provided configuration for this target"
+                        )
                     userConfig
                 } else {
                     logger.warn("Could not find target with name: ${userConfig.name} in Kotlin Gradle Plugin")
@@ -227,9 +241,11 @@ open class DokkaTask : DefaultTask() {
                         ConfigurationExtractor(subProject).extractConfiguration(config.name, config.androidVariant)!!
                     )
                 }
-            } catch(e: NullPointerException) {
-                logger.warn("Cannot extract sources from subProjects. Do you have the Kotlin plugin in version 1.3.30+ " +
-                        "and the Kotlin plugin applied in the root project?")
+            } catch (e: NullPointerException) {
+                logger.warn(
+                    "Cannot extract sources from subProjects. Do you have the Kotlin plugin in version 1.3.30+ " +
+                            "and the Kotlin plugin applied in the root project?"
+                )
                 baseConfig
             }
         } else {
@@ -244,10 +260,13 @@ open class DokkaTask : DefaultTask() {
                     ?.let { mergeUserConfigurationAndPlatformData(configuration, it) }
                 ?: configuration
 
-    private fun mergeUserConfigurationAndPlatformData(userConfig: GradlePassConfigurationImpl, autoConfig: PlatformData) =
+    private fun mergeUserConfigurationAndPlatformData(
+        userConfig: GradlePassConfigurationImpl,
+        autoConfig: PlatformData
+    ) =
         userConfig.copy().apply {
             sourceRoots.addAll(userConfig.sourceRoots.union(autoConfig.sourceRoots.toSourceRoots()).distinct())
-            classpath = userConfig.classpath.union(autoConfig.classpath.map { it.absolutePath }).distinct()
+            classpath = userConfig.classpath.union(autoConfig.classpath).distinct()
             if (userConfig.platform == null && autoConfig.platform != "")
                 platform = autoConfig.platform
         }
@@ -259,10 +278,18 @@ open class DokkaTask : DefaultTask() {
         if (config.moduleName == "") {
             config.moduleName = project.name
         }
-        if (config.targets.isEmpty() && multiplatform.isNotEmpty()){
+        if (config.targets.isEmpty() && multiplatform.isNotEmpty()) {
             config.targets = listOf(config.name)
         }
-        config.classpath = (config.classpath as List<Any>).map { it.toString() }.distinct() // Workaround for Groovy's GStringImpl
+        config.runtimeClassPath = try {
+            //val d = project.buildFile//( as DefaultSourceSetContainer).asMap["main"]
+            //project.convention.getPlugin(JavaPluginConvention::class.java).sourceSets.findByName("main")
+            project.extensions.findByName("sourceSets")?.safeAs<DefaultSourceSetContainer>()?.asMap?.get("main")
+                ?.run { runtimeClasspath.files.plus(annotationProcessorPath.files).plus(compileClasspath.files) }?.filterNotNull().orEmpty()
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        config.classpath = config.classpath.distinct() // Workaround for Groovy's GStringImpl
         config.sourceRoots = config.sourceRoots.distinct().toMutableList()
         config.samples = config.samples.map { project.file(it).absolutePath }
         config.includes = config.includes.map { project.file(it).absolutePath }
@@ -304,7 +331,7 @@ open class DokkaTask : DefaultTask() {
 
     @Classpath
     fun getInputClasspath(): FileCollection =
-        project.files((collectConfigurations().flatMap { it.classpath } as List<Any>).map { project.fileTree(File(it.toString())) })
+        project.files(collectConfigurations().flatMap { it.classpath }.map { project.fileTree(File(it.path)) })
 
     companion object {
         const val COLORS_ENABLED_PROPERTY = "kotlin.colors.enabled"

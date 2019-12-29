@@ -4,6 +4,7 @@ import org.jetbrains.dokka.CoreExtensions
 import org.jetbrains.dokka.pages.DocTagToContentConverter
 import org.jetbrains.dokka.postProcess.DefaultPostProcess
 import org.jetbrains.dokka.renderers.HtmlRenderer
+import org.jetbrains.dokka.renderers.MDRenderer
 import org.jetbrains.dokka.resolvers.DefaultLocationProvider
 import org.jetbrains.dokka.transformers.descriptors.DefaultDescriptorToDocumentationTranslator
 import org.jetbrains.dokka.transformers.documentation.DefaultDocumentationNodeMerger
@@ -17,9 +18,9 @@ object DefaultExtensions : DokkaExtensionHandler {
             CoreExtensions.documentationMerger -> DefaultDocumentationNodeMerger
             CoreExtensions.commentsToContentConverterFactory -> ::DocTagToContentConverter
             CoreExtensions.documentationToPageTranslator -> DefaultDocumentationToPageTranslator
-            CoreExtensions.rendererFactory -> ::HtmlRenderer
+            CoreExtensions.rendererFactory -> ::MDRenderer
             CoreExtensions.locationProviderFactory -> ::DefaultLocationProvider
-            CoreExtensions.fileExtension -> ".html"
+            CoreExtensions.fileExtension -> ".md"
             CoreExtensions.postProcess -> DefaultPostProcess
             else -> null
         }.let { listOfNotNull(it) as List<T> }

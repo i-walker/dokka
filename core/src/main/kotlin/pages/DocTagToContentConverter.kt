@@ -63,7 +63,7 @@ class DocTagToContentConverter(
             is Code -> listOf(
                 ContentCode(
                     buildChildren(docTag),
-                    "",
+                    "kotlin", // this needs a proper implementation
                     dci,
                     platforms,
                     styles,
