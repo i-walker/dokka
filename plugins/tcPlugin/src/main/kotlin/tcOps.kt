@@ -7,6 +7,7 @@ import org.jetbrains.dokka.DokkaConfiguration
 import org.jetbrains.dokka.plugability.DokkaContext
 import java.io.File
 import java.nio.file.Path
+import kotlin.script.experimental.api.ScriptDiagnostic
 
 data class TcProcessingContext(
   val index: Int,
@@ -71,3 +72,8 @@ data class CompilationException(
 ) : NoStackTrace(msg) {
   override fun toString(): String = msg
 }
+
+data class DiagnosticException(
+  val errors: List<ScriptDiagnostic>,
+  val msg: String = errors.joinToString(separator = "\n") { "$it" }
+) : NoStackTrace(msg)

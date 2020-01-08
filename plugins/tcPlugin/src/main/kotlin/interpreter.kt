@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentMap
 import javax.script.ScriptContext
 import javax.script.ScriptEngine
 import javax.script.ScriptEngineManager
+import kotlin.script.experimental.api.valueOr
 
 sealed class SnippetParserState {
   data class CollectingCode(val snippet: Snippet) : SnippetParserState()
@@ -27,7 +28,7 @@ val interpreter: TcOps =
   object : TcOps {
     private fun Path.containsSnippets(): Boolean =
       toFile().bufferedReader().use {
-        it.lines().anyMatch { s -> s.contains("```kotlin") || s.contains("```java") }
+        it.lines().anyMatch { s -> s.contains("```kotlin") }
       }
 
     override suspend fun Path.files(): List<TcProcessingContext> =
@@ -98,11 +99,31 @@ val interpreter: TcOps =
       snippets: Tuple2<Path, List<Snippet>>,
       compilerArgs: List<File>
     ): List<Snippet> =
-      getEngineCache(snippets.b, compilerArgs).let { engineCache ->
+      snippets.b.mapIndexed { i, snip ->
+        val result = evaluate(snip.code, compilerArgs).valueOr {
+          error ->
+          printConsole(colored(ANSI_RED, "[✗ ${snippets.a} [${i + 1}]"))
+          val exception = DiagnosticException(error.reports)
+          throw CompilationException(
+            snippets.a, snip, exception, msg = "\n" +
+              """
+                | File located at: ${snippets.a}
+                |
+                |```
+                |${snip.code}
+                |```
+                |${colored(ANSI_RED, exception.msg)}
+                """.trimMargin()
+          )
+        }
+        snip.copy(result = Some("// $result"))
+      }
+
+      /*getEngineCache(snippets.b, compilerArgs).let { engineCache ->
         // run each snipped and handle its result
         snippets.b.mapIndexed { i, snip ->
           try {
-            val r = engineCache["arrow"]?.put()
+            val r = engineCache["arrow"]?.eval(snip.code)
             val result = engineCache[snip.lang]?.eval(snip.code)
             snip.copy(result = Some("// $result"))
           } catch (error: Throwable) {
@@ -120,7 +141,7 @@ val interpreter: TcOps =
             )
           }
         }
-      }
+      }*/
 
 
     override suspend fun printConsole(msg: String): Unit = println(msg)
@@ -133,6 +154,7 @@ val interpreter: TcOps =
     ): Map<String, ScriptEngine> {
       val urlArgs = compilerArgs.map(::toUrl)
       val cache = engineCache[urlArgs]
+      // val result = snippets.map { evaluate(it.code, compilerArgs) }
       return if (cache == null) { // create a new engine
         val classLoader = URLClassLoader(urlArgs.toTypedArray())
         val seManager = ScriptEngineManager(classLoader)
