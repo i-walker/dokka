@@ -8,7 +8,23 @@ repositories {
 }
 
 dependencies {
-    compileOnly project(':core')
+    compileOnly(project(':core')) {
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-compiler"
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-script-runtime"
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib"
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-reflect"
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
+        exclude group: "org.jetbrains", module: "markdown"
+        exclude group: "org.jetbrains.kotlinx", module: "kotlinx-html-jvm"
+        exclude group: "com.google.inject", module: "guice"
+        exclude group: "teamcity", module: "kotlin-plugin"
+        exclude group: "com.google.inject", module: "guice"
+        exclude group: "com.jetbrains.intellij.idea", module: "intellij-core"
+        exclude group: "com.jetbrains.intellij.idea", module: "ideaIC"
+        exclude group: "teamcity", module: "kotlin-ide-common"
+        exclude group: "teamcity", module: "kotlin-plugin-$bundled_kotlin_compiler_version-IJ2018.2-1"
+    }
     implementation("io.arrow-kt:arrow-fx:$arrow_version")
     compile("io.github.classgraph:classgraph:4.8.59") {
         exclude group: "org.jetbrains.kotlin", module: "kotlin-compiler"
