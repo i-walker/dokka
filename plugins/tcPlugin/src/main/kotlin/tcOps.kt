@@ -5,9 +5,8 @@ import arrow.core.Option
 import arrow.core.Tuple2
 import org.jetbrains.dokka.DokkaConfiguration
 import org.jetbrains.dokka.plugability.DokkaContext
-import java.io.File
+import java.net.URL
 import java.nio.file.Path
-import kotlin.script.experimental.api.ScriptDiagnostic
 
 data class TcProcessingContext(
   val index: Int,
@@ -21,13 +20,13 @@ interface TcOps {
 
   suspend fun <R> Path.foldLines(f: (Sequence<String>) -> R): R
 
-  fun compilerArgs(ctx: DokkaContext, config: DokkaConfiguration): List<File>
+  fun compilerArgs(ctx: DokkaContext, config: DokkaConfiguration): List<URL>
 
   fun extractCode(content: Sequence<String>): Tuple2<List<String>, List<Snippet>>
 
   suspend fun compileCode(
     snippets: Tuple2<Path, List<Snippet>>,
-    compilerArgs: List<File>
+    compilerArgs: List<URL>
   ): List<Snippet>
 
   suspend fun printConsole(msg: String): Unit
@@ -72,8 +71,3 @@ data class CompilationException(
 ) : NoStackTrace(msg) {
   override fun toString(): String = msg
 }
-
-data class DiagnosticException(
-  val errors: List<ScriptDiagnostic>,
-  val msg: String = errors.joinToString(separator = "\n") { "$it" }
-) : NoStackTrace(msg)

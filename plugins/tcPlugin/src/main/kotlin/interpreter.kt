@@ -17,7 +17,6 @@ import java.util.concurrent.ConcurrentMap
 import javax.script.ScriptContext
 import javax.script.ScriptEngine
 import javax.script.ScriptEngineManager
-import kotlin.script.experimental.api.valueOr
 
 sealed class SnippetParserState {
   data class CollectingCode(val snippet: Snippet) : SnippetParserState()
@@ -48,9 +47,9 @@ val interpreter: TcOps =
     override suspend fun <R> Path.foldLines(f: (Sequence<String>) -> R): R =
       toFile().useLines { f(it) }
 
-    override fun compilerArgs(ctx: DokkaContext, config: DokkaConfiguration): List<File> =
+    override fun compilerArgs(ctx: DokkaContext, config: DokkaConfiguration): List<URL> =
       config.passesConfigurations.map {
-        it.runtimeClassPath.map { f -> File(f.path) }
+        it.runtimeClassPath.map { f -> File(f.path).toURI().toURL() }
       }.flatten().distinct()
 
     val fenceRegexStart = "```(.*)".toRegex()
@@ -97,33 +96,12 @@ val interpreter: TcOps =
 
     override suspend fun compileCode(
       snippets: Tuple2<Path, List<Snippet>>,
-      compilerArgs: List<File>
+      compilerArgs: List<URL>
     ): List<Snippet> =
-      snippets.b.mapIndexed { i, snip ->
-        val result = evaluate(snip.code, compilerArgs).valueOr {
-          error ->
-          printConsole(colored(ANSI_RED, "[✗ ${snippets.a} [${i + 1}]"))
-          val exception = DiagnosticException(error.reports)
-          throw CompilationException(
-            snippets.a, snip, exception, msg = "\n" +
-              """
-                | File located at: ${snippets.a}
-                |
-                |```
-                |${snip.code}
-                |```
-                |${colored(ANSI_RED, exception.msg)}
-                """.trimMargin()
-          )
-        }
-        snip.copy(result = Some("// $result"))
-      }
-
-      /*getEngineCache(snippets.b, compilerArgs).let { engineCache ->
+      getEngineCache(snippets.b, compilerArgs).let { engineCache ->
         // run each snipped and handle its result
         snippets.b.mapIndexed { i, snip ->
           try {
-            val r = engineCache["arrow"]?.eval(snip.code)
             val result = engineCache[snip.lang]?.eval(snip.code)
             snip.copy(result = Some("// $result"))
           } catch (error: Throwable) {
@@ -141,8 +119,7 @@ val interpreter: TcOps =
             )
           }
         }
-      }*/
-
+      }
 
     override suspend fun printConsole(msg: String): Unit = println(msg)
 
@@ -150,22 +127,18 @@ val interpreter: TcOps =
 
     private fun getEngineCache(
       snippets: List<Snippet>,
-      compilerArgs: List<File>
+      compilerArgs: List<URL>
     ): Map<String, ScriptEngine> {
-      val urlArgs = compilerArgs.map(::toUrl)
-      val cache = engineCache[urlArgs]
-      // val result = snippets.map { evaluate(it.code, compilerArgs) }
+      val cache = engineCache[compilerArgs]
       return if (cache == null) { // create a new engine
-        val classLoader = URLClassLoader(urlArgs.toTypedArray())
+        val classLoader = URLClassLoader(compilerArgs.toTypedArray())
         val seManager = ScriptEngineManager(classLoader)
-        // ScriptEngineManager(SE.scriptEngine.javaClass.classLoader.loadClass(SE::class.java.name).classLoader)
         val langs: List<String> = snippets.map { it.lang }.distinct()
         val engines: Map<String, ScriptEngine> = langs.toList().map {
           it to seManager.getEngineByExtension(extensionMappings.getOrDefault(it, "kts"))
         }.toMap()
           .filterValues { it != null }
-          .plus("arrow" to seManager.getEngineByExtension("arrow.kts"))
-        engineCache.putIfAbsent(urlArgs, engines) ?: engines
+        engineCache.putIfAbsent(compilerArgs, engines) ?: engines
       } else { // reset an engine. Non thread-safe
         cache.forEach { (_, engine) ->
           engine.setBindings(engine.createBindings(), ScriptContext.ENGINE_SCOPE)
