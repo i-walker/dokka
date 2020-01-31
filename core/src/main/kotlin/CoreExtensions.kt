@@ -1,17 +1,16 @@
 package org.jetbrains.dokka
 
 import org.jetbrains.dokka.pages.CommentsToContentConverter
-import org.jetbrains.dokka.pages.PageNode
-import org.jetbrains.dokka.plugability.DokkaContext
 import org.jetbrains.dokka.plugability.ExtensionPoint
-import org.jetbrains.dokka.renderers.FileWriter
 import org.jetbrains.dokka.renderers.Renderer
-import org.jetbrains.dokka.resolvers.LocationProvider
+import org.jetbrains.dokka.renderers.OutputWriter
+import org.jetbrains.dokka.resolvers.LocationProviderFactory
 import org.jetbrains.dokka.transformers.descriptors.DescriptorToDocumentationTranslator
 import org.jetbrains.dokka.transformers.documentation.DocumentationNodeMerger
 import org.jetbrains.dokka.transformers.documentation.DocumentationNodeTransformer
 import org.jetbrains.dokka.transformers.documentation.DocumentationToPageTranslator
 import org.jetbrains.dokka.transformers.pages.PageNodeTransformer
+import org.jetbrains.dokka.transformers.psi.PsiToDocumentationTranslator
 import kotlin.reflect.KProperty
 
 
@@ -21,13 +20,15 @@ import kotlin.reflect.KProperty
  */
 object CoreExtensions {
     val descriptorToDocumentationTranslator by coreExtension<DescriptorToDocumentationTranslator>()
+    val psiToDocumentationTranslator by coreExtension<PsiToDocumentationTranslator>()
     val documentationMerger by coreExtension<DocumentationNodeMerger>()
     val documentationTransformer by coreExtension<DocumentationNodeTransformer>()
-    val commentsToContentConverterFactory by coreExtension<(DokkaContext) -> CommentsToContentConverter>()
+    val commentsToContentConverter by coreExtension<CommentsToContentConverter>()
     val documentationToPageTranslator by coreExtension<DocumentationToPageTranslator>()
     val pageTransformer by coreExtension<PageNodeTransformer>()
-    val rendererFactory by coreExtension<(FileWriter, LocationProvider, DokkaContext) -> Renderer>()
-    val locationProviderFactory by coreExtension<(root: PageNode, DokkaConfiguration, DokkaContext) -> LocationProvider>()
+    val locationProviderFactory by coreExtension<LocationProviderFactory>()
+    val outputWriter by coreExtension<OutputWriter>()
+    val renderer by coreExtension<Renderer>()
     val fileExtension by coreExtension<String>()
 
     private fun <T: Any> coreExtension() = object {

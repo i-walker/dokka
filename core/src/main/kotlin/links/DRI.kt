@@ -68,43 +68,73 @@ data class Callable(
     }
 }
 
-data class TypeReference(val classNames: String, val typeBounds: List<TypeReference> = emptyList()) {
-    override fun toString() = classNames + if (typeBounds.isNotEmpty()) {
-        "[${typeBounds.joinToString(",")}]"
-    } else {
-        ""
-    }
+sealed class TypeReference {
+    abstract val isNullable: Boolean
 
     companion object {
         fun from(d: ReceiverParameterDescriptor): TypeReference? =
-            when (val value = d.value) {
-                is ExtensionReceiver -> TypeReference(
-                    classNames = value.type.constructorName.orEmpty(),
-                    typeBounds = value.type.arguments.map { from(it) }
-                )
+            when (d.value) {
+                is ExtensionReceiver -> from(d.type)
                 else -> run {
                     println("Unknown value type for $d")
                     null
                 }
             }
 
-        fun from(d: ValueParameterDescriptor): TypeReference? = from(d.type)
+        fun from(d: ValueParameterDescriptor): TypeReference? =
+            from(d.type)
 
-        private fun from(tp: TypeParameterDescriptor): TypeReference =
-            TypeReference("", tp.upperBounds.map { from(it) })
 
-        private fun from(t: KotlinType): TypeReference =
-            TypeReference(t.constructorName.orEmpty(), t.arguments.map { from(it) })
-
-        private fun from(t: TypeProjection): TypeReference =
-            if (t.isStarProjection) {
-                starProjection
-            } else {
-                from(t.type)
+        private fun from(t: KotlinType, self: KotlinType? = null): TypeReference =
+            if (t == self)
+                if (t.isMarkedNullable) NullableSelfType else SelfType
+            else when (val d = t.constructor.declarationDescriptor) {
+                is TypeParameterDescriptor -> TypeParam(
+                    d.upperBounds.map { from(it, self ?: t) },
+                    t.isMarkedNullable
+                )
+                else -> TypeConstructor(
+                    t.constructorName.orEmpty(),
+                    t.arguments.map { from(it, self) },
+                    t.isMarkedNullable
+                )
             }
 
-        val starProjection = TypeReference("*")
+
+        private fun from(t: TypeProjection, r: KotlinType? = null): TypeReference =
+            if (t.isStarProjection) {
+                TypeConstructor("kotlin.Any", emptyList(), isNullable = true)
+            } else {
+                from(t.type, r)
+            }
     }
+}
+
+data class JavaClassReference(val name: String): TypeReference() {
+    override val isNullable = true
+    override fun toString(): String = name
+}
+
+data class TypeParam(val bounds: List<TypeReference>, override val isNullable: Boolean) : TypeReference()
+
+data class TypeConstructor(
+    val fullyQualifiedName: String,
+    val params: List<TypeReference>,
+    override val isNullable: Boolean
+) : TypeReference() {
+    override fun toString() = fullyQualifiedName +
+            (if (params.isNotEmpty()) "[${params.joinToString(",")}]" else "") +
+            if (isNullable) "?" else ""
+}
+
+object SelfType : TypeReference() {
+    override val isNullable = false
+    override fun toString() = "^"
+}
+
+object NullableSelfType : TypeReference() {
+    override val isNullable = true
+    override fun toString() = "^?"
 }
 
 private operator fun <T> List<T>.component6(): T = get(5)

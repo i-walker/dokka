@@ -11,14 +11,6 @@
       <entry name="!?*.kt" />
       <entry name="!?*.clj" />
     </wildcardResourcePatterns>
-    <annotationProcessing>
-      <profile name="Maven default annotation processors profile" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <module name="dokka-maven-plugin" />
-      </profile>
-    </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="android-gradle-plugin_main" target="1.8" />
       <module name="android-gradle-plugin_test" target="1.8" />
@@ -66,6 +58,8 @@
       <module name="dokka.runners.gradle-plugin.test" target="1.8" />
       <module name="dokka.runners.maven-plugin.main" target="1.8" />
       <module name="dokka.runners.maven-plugin.test" target="1.8" />
+      <module name="dokka.testApi.main" target="1.8" />
+      <module name="dokka.testApi.test" target="1.8" />
       <module name="fatjar_main" target="1.8" />
       <module name="fatjar_test" target="1.8" />
       <module name="gradle-integration-tests.org.jetbrains.dokka.gradle-integration-tests.main" target="1.8" />

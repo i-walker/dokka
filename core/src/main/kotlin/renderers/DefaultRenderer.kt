@@ -1,78 +1,106 @@
 package org.jetbrains.dokka.renderers
 
+import org.jetbrains.dokka.CoreExtensions
 import org.jetbrains.dokka.pages.*
 import org.jetbrains.dokka.plugability.DokkaContext
+import org.jetbrains.dokka.plugability.single
 import org.jetbrains.dokka.resolvers.LocationProvider
+import org.jetbrains.dokka.transformers.pages.PageNodeTransformer
 
-abstract class DefaultRenderer(
-    protected val fileWriter: FileWriter,
-    protected val locationProvider: LocationProvider,
+abstract class DefaultRenderer<T>(
+    protected val outputWriter: OutputWriter,
     protected val context: DokkaContext
 ) : Renderer {
 
-    protected abstract fun buildHeader(level: Int, text: String): String
-    protected abstract fun buildLink(text: String, address: String): String
-    protected abstract fun buildList(node: ContentList, pageContext: PageNode): String
-    protected abstract fun buildNewLine(): String
-    protected abstract fun buildResource(node: ContentEmbeddedResource, pageContext: PageNode): String
-    protected abstract fun buildTable(node: ContentTable, pageContext: PageNode): String
+    private val extension = context.single(CoreExtensions.fileExtension)
 
-    protected open fun buildText(textNode: ContentText): String = textNode.text
+    protected lateinit var locationProvider: LocationProvider
+        private set
 
-    protected open fun buildGroup(node: ContentGroup, pageContext: PageNode): String = node.children.joinToString("") { it.build(pageContext) }
+    protected open val preprocessors: Iterable<PageNodeTransformer> = emptyList()
 
-    protected open fun buildLinkText(nodes: List<ContentNode>, pageContext: PageNode): String =
-        nodes.joinToString(" ") { it.build(pageContext) }
+    protected abstract fun T.buildHeader(level: Int, content: T.() -> Unit)
+    protected abstract fun T.buildLink(address: String, content: T.() -> Unit)
+    protected abstract fun T.buildList(node: ContentList, pageContext: ContentPage)
+    protected abstract fun T.buildNewLine()
+    protected abstract fun T.buildResource(node: ContentEmbeddedResource, pageContext: ContentPage)
+    protected abstract fun T.buildTable(node: ContentTable, pageContext: ContentPage)
+    protected abstract fun T.buildText(textNode: ContentText)
+    protected abstract fun T.buildNavigation(page: PageNode)
 
-    protected open fun buildCode(code: List<ContentNode>, language: String, pageContext: PageNode): String =
-        code.joinToString { it.build(pageContext) }
+    protected abstract fun buildPage(page: ContentPage, content: (T, ContentPage) -> Unit): String
+    protected abstract fun buildError(node: ContentNode)
 
-    protected open fun buildHeader(node: ContentHeader, pageContext: PageNode): String =
-        buildHeader(node.level, node.children.joinToString { it.build(pageContext) })
+    protected open fun T.buildGroup(node: ContentGroup, pageContext: ContentPage) {
+        node.children.forEach { it.build(this, pageContext) }
+    }
 
-    protected open fun buildNavigation(page: PageNode): String =
-        locationProvider.ancestors(page).fold("") { acc, node -> "$acc/${buildLink(
-            node.name,
-            locationProvider.resolve(node, page)
-        )}" }
+    protected open fun T.buildLinkText(nodes: List<ContentNode>, pageContext: ContentPage) {
+        nodes.forEach { it.build(this, pageContext) }
+    }
 
-    protected open fun ContentNode.build(pageContext: PageNode): String = buildContentNode(this, pageContext)
+    protected open fun T.buildCode(code: List<ContentNode>, language: String, pageContext: ContentPage) {
+        code.forEach { it.build(this, pageContext) }
+    }
 
-    protected open fun buildContentNode(node: ContentNode, pageContext: PageNode): String =
+    protected open fun T.buildHeader(node: ContentHeader, pageContext: ContentPage) {
+        buildHeader(node.level) { node.children.forEach { it.build(this, pageContext) } }
+    }
+
+    protected open fun ContentNode.build(builder: T, pageContext: ContentPage) =
+        builder.buildContentNode(this, pageContext)
+
+    protected open fun T.buildContentNode(node: ContentNode, pageContext: ContentPage) {
         when (node) {
             is ContentText -> buildText(node)
             is ContentHeader -> buildHeader(node, pageContext)
             is ContentCode -> buildCode(node.children, node.language, pageContext)
             is ContentDRILink -> buildLink(
-                buildLinkText(node.children, pageContext),
                 locationProvider.resolve(node.address, node.platforms.toList(), pageContext)
-            )
-            is ContentResolvedLink -> buildLink(buildLinkText(node.children, pageContext), node.address)
+            ) {
+                buildLinkText(node.children, pageContext)
+            }
+            is ContentResolvedLink -> buildLink(node.address) { buildLinkText(node.children, pageContext) }
             is ContentEmbeddedResource -> buildResource(node, pageContext)
             is ContentList -> buildList(node, pageContext)
             is ContentTable -> buildTable(node, pageContext)
             is ContentGroup -> buildGroup(node, pageContext)
-            else -> "".also { println("Unrecognized ContentNode: $node") }
+            else -> buildError(node)
         }
+    }
 
-    protected open fun buildPageContent(page: PageNode): String =
-        buildNavigation(page) + page.content.build(page)
+    protected open fun buildPageContent(context: T, page: ContentPage) {
+        context.buildNavigation(page)
+        page.content.build(context, page)
+    }
 
-    protected open fun renderPage(page: PageNode) =
-        fileWriter.write(locationProvider.resolve(page), buildPageContent(page), "")
+    protected open fun renderPage(page: PageNode) {
+        val path by lazy { locationProvider.resolve(page, skipExtension = true) }
+        when (page) {
+            is ContentPage -> outputWriter.write(path, buildPage(page) { c, p -> buildPageContent(c, p) }, extension)
+            is RendererSpecificPage -> when (val strategy = page.strategy) {
+                is RenderingStrategy.Copy -> outputWriter.writeResources(strategy.from, path)
+                is RenderingStrategy.Write -> outputWriter.write(path, strategy.text, "")
+                is RenderingStrategy.Callback -> outputWriter.write(path, strategy.instructions(this, page))
+                RenderingStrategy.DoNothing -> Unit
+            }
+            else -> throw AssertionError(
+                "Page ${page.name} cannot be rendered by renderer as it is not renderer specific nor contains content"
+            )
+        }
+    }
 
     protected open fun renderPages(root: PageNode) {
         renderPage(root)
         root.children.forEach { renderPages(it) }
     }
 
-    protected open fun buildSupportFiles() {}
-
-    protected open fun renderPackageList(root: PageNode) =
+    // reimplement this as preprocessor
+    protected open fun renderPackageList(root: ContentPage) =
         getPackageNamesAndPlatforms(root)
             .keys
             .joinToString("\n")
-            .also { fileWriter.write("${root.name}/package-list", it, "") }
+            .also { outputWriter.write("${root.name}/package-list", it, "") }
 
     protected open fun getPackageNamesAndPlatforms(root: PageNode): Map<String, List<PlatformData>> =
         root.children
@@ -84,11 +112,16 @@ abstract class DefaultRenderer(
                     emptyMap()
                 }
 
-    override fun render(root: PageNode) {
-        renderPackageList(root)
-        buildSupportFiles()
-        renderPages(root)
+    override fun render(root: RootPageNode) {
+        val newRoot = preprocessors.fold(root) { acc, t -> t(acc) }
+
+        locationProvider =
+            context.single(CoreExtensions.locationProviderFactory).getLocationProvider(newRoot)
+
+        root.children<ModulePageNode>().forEach { renderPackageList(it) }
+
+        renderPages(newRoot)
     }
 }
 
-fun PageNode.platforms() = this.content.platforms.toList()
+fun ContentPage.platforms() = this.content.platforms.toList()
