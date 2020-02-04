@@ -4,8 +4,8 @@ subprojects {
     }
 
     dependencies {
-        compileOnly(project(":core"))
-        compileOnly(kotlin("stdlib-jdk8"))
-        testImplementation(project(":testApi"))
+        // compileOnly(project(":core"))
+        // compileOnly(kotlin("stdlib-jdk8"))
+        // testImplementation(project(":testApi"))
     }
 }

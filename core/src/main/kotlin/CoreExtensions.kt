@@ -4,6 +4,7 @@ import org.jetbrains.dokka.pages.CommentsToContentConverter
 import org.jetbrains.dokka.plugability.ExtensionPoint
 import org.jetbrains.dokka.renderers.Renderer
 import org.jetbrains.dokka.renderers.OutputWriter
+import org.jetbrains.dokka.postProcess.PostProcess
 import org.jetbrains.dokka.resolvers.LocationProviderFactory
 import org.jetbrains.dokka.transformers.descriptors.DescriptorToDocumentationTranslator
 import org.jetbrains.dokka.transformers.documentation.DocumentationNodeMerger
@@ -30,6 +31,7 @@ object CoreExtensions {
     val outputWriter by coreExtension<OutputWriter>()
     val renderer by coreExtension<Renderer>()
     val fileExtension by coreExtension<String>()
+    val postProcess by coreExtension<PostProcess>()
 
     private fun <T: Any> coreExtension() = object {
         operator fun provideDelegate(thisRef: CoreExtensions, property: KProperty<*>): Lazy<ExtensionPoint<T>> =

@@ -146,7 +146,8 @@ abstract class AbstractCoreTest {
     @DokkaConfigurationDsl
     protected class DokkaPassConfigurationBuilder(
         var moduleName: String = "root",
-        var classpath: List<String> = emptyList(),
+        var classpath: List<File> = emptyList(),
+        var runtimeClasspath: List<File> = emptyList(),
         var sourceRoots: List<String> = emptyList(),
         var samples: List<String> = emptyList(),
         var includes: List<String> = emptyList(),
@@ -172,6 +173,7 @@ abstract class AbstractCoreTest {
         fun build() = PassConfigurationImpl(
             moduleName = moduleName,
             classpath = classpath,
+            runtimeClassPath = runtimeClasspath,
             sourceRoots = sourceRoots.map { SourceRootImpl(it) },
             samples = samples,
             includes = includes,

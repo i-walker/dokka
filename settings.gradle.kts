@@ -7,6 +7,7 @@ include("runners:gradle-plugin")
 include("runners:cli")
 include("runners:maven-plugin")
 include("plugins:xml")
+include("plugins:examplePlugin")
 include("plugins:mathjax")
 include("integration-tests:gradle-integration-tests")
 

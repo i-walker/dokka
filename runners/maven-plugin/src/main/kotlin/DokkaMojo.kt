@@ -65,7 +65,9 @@ abstract class AbstractDokkaMojo : AbstractMojo() {
     var includes: List<String> = emptyList()
 
     @Parameter(required = true, defaultValue = "\${project.compileClasspathElements}")
-    var classpath: List<String> = emptyList()
+    var classpath: List<File> = emptyList()
+
+    var runtimeClassPath: List<File> = emptyList()
 
     @Parameter
     var sourceLinks: List<SourceLinkMapItem> = emptyList()
@@ -180,7 +182,8 @@ abstract class AbstractDokkaMojo : AbstractMojo() {
             analysisPlatform = if (platform.isNotEmpty()) Platform.fromString(platform) else Platform.DEFAULT,
             targets = targets,
             includeNonPublic = includeNonPublic,
-            includeRootPackage = includeRootPackage
+            includeRootPackage = includeRootPackage,
+            runtimeClassPath = runtimeClassPath
         )
 
         val configuration = DokkaConfigurationImpl(

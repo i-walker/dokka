@@ -3,6 +3,7 @@ package org.jetbrains.dokka
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.dokka.analysis.AnalysisEnvironment
 import org.jetbrains.dokka.analysis.DokkaResolutionFacade
 import org.jetbrains.dokka.model.Module
@@ -11,6 +12,7 @@ import org.jetbrains.dokka.pages.PlatformData
 import org.jetbrains.dokka.pages.RootPageNode
 import org.jetbrains.dokka.plugability.DokkaContext
 import org.jetbrains.dokka.plugability.single
+import org.jetbrains.dokka.postProcess.PostProcess
 import org.jetbrains.dokka.utilities.DokkaLogger
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
@@ -54,6 +56,9 @@ class DokkaGenerator(
 
         logger.progress("Rendering")
         render(transformedPages, context)
+
+        logger.progress("PostProcesses")
+        run(configuration, context)
     }
 
     fun setUpAnalysis(configuration: DokkaConfiguration): Map<PlatformData, EnvironmentAndFacade> =
@@ -101,12 +106,19 @@ class DokkaGenerator(
         renderer.render(transformedPages)
     }
 
+    fun run(
+        configuration: DokkaConfiguration,
+        ctx: DokkaContext
+    ) {
+        runBlocking { ctx[CoreExtensions.postProcess].compute(configuration, ctx) }
+    }
+
     private fun createEnvironmentAndFacade(pass: DokkaConfiguration.PassConfiguration): EnvironmentAndFacade =
         AnalysisEnvironment(DokkaMessageCollector(logger), pass.analysisPlatform).run {
             if (analysisPlatform == Platform.jvm) {
                 addClasspath(PathUtil.getJdkClassesRootsFromCurrentJre())
             }
-            pass.classpath.forEach { addClasspath(File(it)) }
+            pass.classpath.forEach { addClasspath(File(it.path)) }
 
             addSources(pass.sourceRoots.map { it.path })
 
@@ -168,6 +180,20 @@ class DokkaGenerator(
 
         override fun hasErrors() = seenErrors
     }
+
+    private suspend fun List<PostProcess>.compute(
+        conf: DokkaConfiguration,
+        ctx: DokkaContext
+    ): Unit =
+        forEach {
+            try {
+                println("\nPostProcess:${it.name} starts\n")
+                it.run(conf, ctx)
+            } catch (exp: Throwable) {
+                println("\nPostProcess:${it.name} throws errors!\n")
+                exp.printStackTrace(System.out)
+            }
+        }
 }
 
 // It is not data class due to ill-defined equals

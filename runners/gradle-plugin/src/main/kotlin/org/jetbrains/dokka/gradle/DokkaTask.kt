@@ -5,6 +5,7 @@ import org.gradle.api.*
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.plugins.DslObject
+import org.gradle.api.internal.tasks.DefaultSourceSetContainer
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.tasks.*
 import org.jetbrains.dokka.DokkaBootstrap
@@ -239,7 +240,7 @@ open class DokkaTask : DefaultTask() {
     private fun mergeUserConfigurationAndPlatformData(userConfig: GradlePassConfigurationImpl, autoConfig: PlatformData) =
         userConfig.copy().apply {
             sourceRoots.addAll(userConfig.sourceRoots.union(autoConfig.sourceRoots.toSourceRoots()).distinct())
-            classpath = userConfig.classpath.union(autoConfig.classpath.map { it.absolutePath }).distinct()
+            classpath = userConfig.classpath.union(autoConfig.classpath).distinct()
             if (userConfig.platform == null && autoConfig.platform != "")
                 platform = autoConfig.platform
         }
@@ -254,7 +255,18 @@ open class DokkaTask : DefaultTask() {
         if (config.targets.isEmpty() && multiplatform.isNotEmpty()){
             config.targets = listOf(config.name)
         }
-        config.classpath = (config.classpath as List<Any>).map { it.toString() }.distinct() // Workaround for Groovy's GStringImpl
+        config.runtimeClassPath = try {
+            // collect all files for runtime resolution
+            (project.extensions.findByName("sourceSets") as? DefaultSourceSetContainer)?.asMap?.get("main")?.run {
+                runtimeClasspath.files.plus(annotationProcessorPath.files).plus(compileClasspath.files)
+            }?.filterNotNull().orEmpty()
+
+            //<DefaultSourceSetContainer>()?.asMap?.get("main")
+                //?.run { runtimeClasspath.files.plus(annotationProcessorPath.files).plus(compileClasspath.files) }?.filterNotNull().orEmpty()
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        config.classpath = config.classpath.distinct() // Workaround for Groovy's GStringImpl
         config.sourceRoots = config.sourceRoots.distinct().toMutableList()
         config.samples = config.samples.map { project.file(it).absolutePath }
         config.includes = config.includes.map { project.file(it).absolutePath }
@@ -296,7 +308,7 @@ open class DokkaTask : DefaultTask() {
 
     @Classpath
     fun getInputClasspath(): FileCollection =
-        project.files((collectConfigurations().flatMap { it.classpath } as List<Any>).map { project.fileTree(File(it.toString())) })
+        project.files(collectConfigurations().flatMap { it.classpath }.map { project.fileTree(File(it.path)) })
 
     companion object {
         const val COLORS_ENABLED_PROPERTY = "kotlin.colors.enabled"
