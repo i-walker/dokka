@@ -295,6 +295,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../user_guide/base-specific/frontend/" title="Html frontend" class="md-nav__link">
+      Html frontend
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -444,10 +456,46 @@
       <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4">
     
     <label class="md-nav__link" for="nav-4">
-      About
+      Community
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
       <label class="md-nav__title" for="nav-4">
+        Community
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../community/plugins-list/" title="Community plugins" class="md-nav__link">
+      Community plugins
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+    
+    <label class="md-nav__link" for="nav-5">
+      About
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
         About
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -599,7 +647,8 @@ to ignore this as the next step will address this error</p>
 <span class="p">}</span>
 </code></pre></div>
 <h2 id="building-sample-plugin">Building sample plugin<a class="headerlink" href="#building-sample-plugin" title="Permanent link">&para;</a></h2>
-<p>In order to load a plugin into Dokka, your class must extend <code>DokkaPlugin</code> class. All instances are automatically loaded during Dokka setup using <code>java.util.ServiceLoader</code>.</p>
+<p>In order to load a plugin into Dokka, your class must extend <code>DokkaPlugin</code> class. A fully qualified name of that class must be placed in a file named <code>org.jetbrains.dokka.plugability.DokkaPlugin</code> under <code>resources/META-INF/services</code>.
+All instances are automatically loaded during Dokka setup using <code>java.util.ServiceLoader</code>.</p>
 <p>Dokka provides a set of entry points, for which user can create their own implementations. They must be delegated using <code>DokkaPlugin.extending(definition: ExtendingDSL.() -&gt; Extension&lt;T, *, *&gt;)</code> function,that returns a delegate <code>ExtensionProvider</code> with supplied definition. </p>
 <p>To create a definition, you can use one of two infix functions<code>with(T)</code> or <code>providing( (DokkaContext) -&gt; T)</code> where <code>T</code> is the type of an extended endpoint. You can also use infix functions:</p>
 <ul>
@@ -680,7 +729,7 @@ to ignore this as the next step will address this error</p>
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../../user_guide/cli/usage/" title="Command line" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../../user_guide/base-specific/frontend/" title="Html frontend" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -689,7 +738,7 @@ to ignore this as the next step will address this error</p>
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Command line
+                Html frontend
               </span>
             </div>
           </a>

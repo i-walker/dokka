@@ -370,6 +370,18 @@
   </li>
 
         
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../base-specific/frontend/" title="Html frontend" class="md-nav__link">
+      Html frontend
+    </a>
+  </li>
+
+        
       </ul>
     </nav>
   </li>
@@ -445,10 +457,46 @@
       <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4">
     
     <label class="md-nav__link" for="nav-4">
-      About
+      Community
     </label>
     <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
       <label class="md-nav__title" for="nav-4">
+        Community
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../community/plugins-list/" title="Community plugins" class="md-nav__link">
+      Community plugins
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+    
+    <label class="md-nav__link" for="nav-5">
+      About
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
         About
       </label>
       <ul class="md-nav__list" data-md-scrollfix>
@@ -574,7 +622,7 @@
 you not only need to add <code>dokka</code> to the <code>build.gradle.kts</code> file, but you also need to modify the <code>settings.gradle.kts</code> file: </p>
 <p>build.gradle.kts:
 <div class="codehilite"><pre><span></span><code><span class="n">plugins</span> <span class="p">{</span>
-    <span class="n">id</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka&quot;</span><span class="p">)</span> <span class="n">version</span> <span class="s">&quot;1.4.10&quot;</span>
+    <span class="n">id</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka&quot;</span><span class="p">)</span> <span class="n">version</span> <span class="s">&quot;1.4.20&quot;</span>
 <span class="p">}</span>
 
 <span class="n">repositories</span> <span class="p">{</span>
@@ -715,8 +763,9 @@ The available configuration options for are shown below:</p>
 
             <span class="c1">// Allows to customize documentation generation options on a per-package basis</span>
             <span class="c1">// Repeat for multiple packageOptions</span>
+            <span class="c1">// If multiple packages match the same matchingRegex, the longuest matchingRegex will be used</span>
             <span class="n">perPackageOption</span> <span class="p">{</span>
-                <span class="n">prefix</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="s">&quot;kotlin&quot;</span><span class="p">)</span> <span class="c1">// will match kotlin and all sub-packages of it</span>
+                <span class="n">matchingRegex</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="s">&quot;kotlin($|\\.).*&quot;</span><span class="p">)</span> <span class="c1">// will match kotlin and all sub-packages of it</span>
                 <span class="c1">// All options are optional, default values are below:</span>
                 <span class="n">skipDeprecated</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="k">false</span><span class="p">)</span>
                 <span class="n">reportUndocumented</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="k">true</span><span class="p">)</span> <span class="c1">// Emit warnings about not documented members </span>
@@ -724,7 +773,7 @@ The available configuration options for are shown below:</p>
             <span class="p">}</span>
             <span class="c1">// Suppress a package</span>
             <span class="n">perPackageOption</span> <span class="p">{</span>
-                <span class="n">prefix</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="s">&quot;kotlin.internal&quot;</span><span class="p">)</span> <span class="c1">// will match kotlin.internal and all sub-packages of it</span>
+                <span class="n">matchingRegex</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="s">&quot;.*\.internal.*&quot;</span><span class="p">)</span> <span class="c1">// will match all .internal packages and sub-packages </span>
                 <span class="n">suppress</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="k">true</span><span class="p">)</span>
             <span class="p">}</span>
         <span class="p">}</span>
@@ -771,13 +820,13 @@ and configured automatically although test source sets are suppressed</p>
 <h2 id="applying-plugins">Applying plugins<a class="headerlink" href="#applying-plugins" title="Permanent link">&para;</a></h2>
 <p>Dokka plugin creates Gradle configuration for each output format in the form of <code>dokka${format}Plugin</code>:</p>
 <div class="codehilite"><pre><span></span><code><span class="n">dependencies</span> <span class="p">{</span>
-    <span class="n">dokkaHtmlPlugin</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka:kotlin-as-java-plugin:1.4.10&quot;</span><span class="p">)</span>
+    <span class="n">dokkaHtmlPlugin</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka:kotlin-as-java-plugin:1.4.20&quot;</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre></div>
 <p>You can also create a custom Dokka task and add plugins directly inside:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">val</span> <span class="py">customDokkaTask</span> <span class="k">by</span> <span class="n">creating</span><span class="p">(</span><span class="n">DokkaTask</span><span class="o">::</span><span class="k">class</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">dependencies</span> <span class="p">{</span>
-        <span class="n">plugins</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka:kotlin-as-java-plugin:1.4.10&quot;</span><span class="p">)</span>
+        <span class="n">plugins</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka:kotlin-as-java-plugin:1.4.20&quot;</span><span class="p">)</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -828,7 +877,7 @@ and configured automatically although test source sets are suppressed</p>
 <span class="p">}</span>
 </code></pre></div>
 <h2 id="multi-module-projects">Multi-module projects<a class="headerlink" href="#multi-module-projects" title="Permanent link">&para;</a></h2>
-<p>For documenting Gradle multi-module projects, you can use <code>dokka${format}Multimodule</code> tasks.</p>
+<p>For documenting Gradle multi-module projects, you can use <code>dokka${format}MultiModule</code> tasks.</p>
 <div class="codehilite"><pre><span></span><code><span class="n">tasks</span><span class="p">.</span><span class="n">dokkaHtmlMultiModule</span><span class="p">.</span><span class="n">configure</span> <span class="p">{</span>
     <span class="n">outputDirectory</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="n">buildDir</span><span class="p">.</span><span class="n">resolve</span><span class="p">(</span><span class="s">&quot;dokkaCustomMultiModuleOutput&quot;</span><span class="p">))</span>
     <span class="n">documentationFileName</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="s">&quot;README.md&quot;</span><span class="p">)</span>
