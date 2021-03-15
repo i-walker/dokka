@@ -646,7 +646,7 @@
 you not only need to add <code>dokka</code> to the <code>build.gradle.kts</code> file, but you also need to modify the <code>settings.gradle.kts</code> file: </p>
 <p>build.gradle.kts:
 <div class="codehilite"><pre><span></span><code><span class="n">plugins</span> <span class="p">{</span>
-    <span class="n">id</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka&quot;</span><span class="p">)</span> <span class="n">version</span> <span class="s">&quot;1.4.20&quot;</span>
+    <span class="n">id</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka&quot;</span><span class="p">)</span> <span class="n">version</span> <span class="s">&quot;1.4.30&quot;</span>
 <span class="p">}</span>
 
 <span class="n">repositories</span> <span class="p">{</span>
@@ -715,6 +715,9 @@ The available configuration options for are shown below:</p>
 
             <span class="c1">// Used to remove a source set from documentation, test source sets are suppressed by default  </span>
             <span class="n">suppress</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="k">false</span><span class="p">)</span>
+
+            <span class="c1">// Used to prevent resolving package-lists online. When this option is set to true, only local files are resolved  </span>
+            <span class="n">offlineMode</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="k">false</span><span class="p">)</span>
 
             <span class="c1">// Use to include or exclude non public members</span>
             <span class="n">includeNonPublic</span><span class="p">.</span><span class="k">set</span><span class="p">(</span><span class="k">false</span><span class="p">)</span>
@@ -844,13 +847,13 @@ and configured automatically although test source sets are suppressed</p>
 <h2 id="applying-plugins">Applying plugins<a class="headerlink" href="#applying-plugins" title="Permanent link">&para;</a></h2>
 <p>Dokka plugin creates Gradle configuration for each output format in the form of <code>dokka${format}Plugin</code>:</p>
 <div class="codehilite"><pre><span></span><code><span class="n">dependencies</span> <span class="p">{</span>
-    <span class="n">dokkaHtmlPlugin</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka:kotlin-as-java-plugin:1.4.20&quot;</span><span class="p">)</span>
+    <span class="n">dokkaHtmlPlugin</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka:kotlin-as-java-plugin:1.4.30&quot;</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre></div>
 <p>You can also create a custom Dokka task and add plugins directly inside:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">val</span> <span class="py">customDokkaTask</span> <span class="k">by</span> <span class="n">creating</span><span class="p">(</span><span class="n">DokkaTask</span><span class="o">::</span><span class="k">class</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">dependencies</span> <span class="p">{</span>
-        <span class="n">plugins</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka:kotlin-as-java-plugin:1.4.20&quot;</span><span class="p">)</span>
+        <span class="n">plugins</span><span class="p">(</span><span class="s">&quot;org.jetbrains.dokka:kotlin-as-java-plugin:1.4.30&quot;</span><span class="p">)</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
