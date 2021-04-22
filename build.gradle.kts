@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") apply false
     id("java")
-    id("org.jetbrains.dokka") version "1.4.10.2"
+    id("org.jetbrains.dokka") version "1.4.32"
 }
 
 val dokka_version: String by project
@@ -32,10 +32,7 @@ allprojects {
     }
 
     repositories {
-        jcenter()
         mavenCentral()
-        maven(url = "https://dl.bintray.com/kotlin/kotlin-eap")
-        maven(url = "https://dl.bintray.com/kotlin/kotlin-dev")
         maven("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven") {
             content {
                 includeGroup("org.jetbrains.kotlinx")
