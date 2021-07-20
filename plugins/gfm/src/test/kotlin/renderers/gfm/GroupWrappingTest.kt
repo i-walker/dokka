@@ -16,10 +16,12 @@ class GroupWrappingTest : GfmRenderingOnlyTestBase() {
             }
             text("c")
         }
+        val expect = """|//[testPage](test-page.md)
+                        |
+                        |abc""".trimMargin()
 
         CommonmarkRenderer(context).render(page)
-
-        assert(renderedContent == "//[testPage](test-page.md)\n\nabc")
+        assert(renderedContent == expect)
     }
 
     @Test
@@ -31,10 +33,14 @@ class GroupWrappingTest : GfmRenderingOnlyTestBase() {
             }
             text("c")
         }
+        val expect = """|//[testPage](test-page.md)
+                        |
+                        |ab
+                        |
+                        |c""".trimMargin()
 
         CommonmarkRenderer(context).render(page)
-
-        assert(renderedContent == "//[testPage](test-page.md)\n\n\n\nab\n\nc")
+        assert(renderedContent == expect)
     }
 
     @Test
@@ -46,10 +52,14 @@ class GroupWrappingTest : GfmRenderingOnlyTestBase() {
             }
             text("c")
         }
+        val expect = """|//[testPage](test-page.md)
+                        |
+                        |ab
+                        |
+                        |c""".trimMargin()
 
         CommonmarkRenderer(context).render(page)
-
-        assert(renderedContent == "//[testPage](test-page.md)\n\nab  \nc")
+        assert(renderedContent == expect)
     }
 
     @Test
@@ -66,11 +76,15 @@ class GroupWrappingTest : GfmRenderingOnlyTestBase() {
                 text("d")
             }
         }
+        val expect = """|//[testPage](test-page.md)
+                        |
+                        |a
+                        |
+                        |bc
+                        |
+                        |d""".trimMargin()
 
         CommonmarkRenderer(context).render(page)
-
-//        renderedContent.match(Div("a", Div(Div("bc")), "d"))
-        assert(renderedContent == "//[testPage](test-page.md)\n\nabc  \n  \nd  \n")
+        assert(renderedContent == expect)
     }
-
 }

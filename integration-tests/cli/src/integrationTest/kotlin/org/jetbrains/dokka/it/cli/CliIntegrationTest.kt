@@ -147,4 +147,62 @@ class CliIntegrationTest : AbstractCliIntegrationTest() {
             "Expected to render empty packages"
         )
     }
+
+    @Test
+    fun `module name should be optional`() {
+        val dokkaOutputDir = File(projectDir, "output")
+        assertTrue(dokkaOutputDir.mkdirs())
+        val process = ProcessBuilder(
+            "java", "-jar", cliJarFile.path,
+            "-outputDir", dokkaOutputDir.path,
+            "-loggingLevel", "DEBUG",
+            "-pluginsClasspath", basePluginJarFile.path,
+            "-sourceSet",
+            buildString {
+                append(" -src ${File(projectDir, "src").path}")
+            }
+        )
+            .redirectErrorStream(true)
+            .start()
+
+        val result = process.awaitProcessResult()
+        assertEquals(0, result.exitCode, "Expected exitCode 0 (Success)")
+        assertTrue(result.output.contains("Loaded plugins: "), "Expected output to not contain info logs")
+
+        assertTrue(dokkaOutputDir.isDirectory, "Missing dokka output directory")
+
+        val imagesDir = File(dokkaOutputDir, "images")
+        assertTrue(imagesDir.isDirectory, "Missing images directory")
+
+        val scriptsDir = File(dokkaOutputDir, "scripts")
+        assertTrue(scriptsDir.isDirectory, "Missing scripts directory")
+
+        val stylesDir = File(dokkaOutputDir, "styles")
+        assertTrue(stylesDir.isDirectory, "Missing styles directory")
+
+        val navigationHtml = File(dokkaOutputDir, "navigation.html")
+        assertTrue(navigationHtml.isFile, "Missing navigation.html")
+    }
+
+    @Test
+    fun `logging level should be respected`(){
+        val dokkaOutputDir = File(projectDir, "output")
+        assertTrue(dokkaOutputDir.mkdirs())
+        val process = ProcessBuilder(
+            "java", "-jar", cliJarFile.path,
+            "-outputDir", dokkaOutputDir.path,
+            "-loggingLevel", "WARN",
+            "-pluginsClasspath", basePluginJarFile.path,
+            "-sourceSet",
+            buildString {
+                append(" -src ${File(projectDir, "src").path}")
+            }
+        )
+            .redirectErrorStream(true)
+            .start()
+
+        val result = process.awaitProcessResult()
+        assertEquals(0, result.exitCode, "Expected exitCode 0 (Success)")
+        assertFalse(result.output.contains("Loaded plugins: "), "Expected output to not contain info logs")
+    }
 }

@@ -11,8 +11,11 @@ class BasicGradleIntegrationTest(override val versions: BuildVersions) : Abstrac
         @get:JvmStatic
         @get:Parameters(name = "{0}")
         val versions = BuildVersions.permutations(
-            gradleVersions = listOf("6.6", *ifExhaustive("6.4.1", "6.3", "6.2.2", "6.1.1", "6.0"), "5.6.4"),
-            kotlinVersions = listOf("1.3.30", *ifExhaustive("1.3.72"), "1.4.0")
+            gradleVersions = listOf("7.0", *ifExhaustive("6.6", "6.4.1", "6.3", "6.2.2", "6.1.1")),
+            kotlinVersions = listOf("1.3.30", *ifExhaustive("1.3.72", "1.4.32"), "1.5.10")
+        ) + BuildVersions.permutations(
+            gradleVersions = listOf("5.6.4", "6.0"),
+            kotlinVersions = listOf("1.3.30", *ifExhaustive("1.3.72", "1.4.32"))
         )
     }
 
@@ -26,18 +29,35 @@ class BasicGradleIntegrationTest(override val versions: BuildVersions) : Abstrac
 
         File(templateProjectDir, "src").copyRecursively(File(projectDir, "src"))
         val customResourcesDir = File(templateProjectDir, "customResources")
-        if(customResourcesDir.exists() && customResourcesDir.isDirectory) customResourcesDir.copyRecursively(File(projectDir, "customResources"))
+
+        if (customResourcesDir.exists() && customResourcesDir.isDirectory) {
+            val destination = File(projectDir.parentFile, "customResources")
+            destination.mkdirs()
+            destination.deleteRecursively()
+            customResourcesDir.copyRecursively(destination)
+        }
     }
 
     @Test
     fun execute() {
-        val result = createGradleRunner("dokkaHtml", "dokkaJavadoc", "dokkaGfm", "dokkaJekyll", "-i", "-s")
-            .buildRelaxed()
+        runAndAssertOutcome(TaskOutcome.SUCCESS)
+        runAndAssertOutcome(TaskOutcome.UP_TO_DATE)
+    }
 
-        assertEquals(TaskOutcome.SUCCESS, assertNotNull(result.task(":dokkaHtml")).outcome)
-        assertEquals(TaskOutcome.SUCCESS, assertNotNull(result.task(":dokkaJavadoc")).outcome)
-        assertEquals(TaskOutcome.SUCCESS, assertNotNull(result.task(":dokkaGfm")).outcome)
-        assertEquals(TaskOutcome.SUCCESS, assertNotNull(result.task(":dokkaJekyll")).outcome)
+    private fun runAndAssertOutcome(expectedOutcome: TaskOutcome) {
+        val result = createGradleRunner(
+            "dokkaHtml",
+            "dokkaJavadoc",
+            "dokkaGfm",
+            "dokkaJekyll",
+            "-i",
+            "-s"
+        ).buildRelaxed()
+
+        assertEquals(expectedOutcome, assertNotNull(result.task(":dokkaHtml")).outcome)
+        assertEquals(expectedOutcome, assertNotNull(result.task(":dokkaJavadoc")).outcome)
+        assertEquals(expectedOutcome, assertNotNull(result.task(":dokkaGfm")).outcome)
+        assertEquals(expectedOutcome, assertNotNull(result.task(":dokkaJekyll")).outcome)
 
         File(projectDir, "build/dokka/html").assertHtmlOutputDir()
         File(projectDir, "build/dokka/javadoc").assertJavadocOutputDir()
@@ -126,7 +146,10 @@ class BasicGradleIntegrationTest(override val versions: BuildVersions) : Abstrac
         assertTrue(stylesDir.resolve("custom-style-to-add.css").isFile)
         assertEquals("""/* custom stylesheet */""", stylesDir.resolve("custom-style-to-add.css").readText())
         allHtmlFiles().forEach { file ->
-            if(file.name != "navigation.html") assertTrue("custom-style-to-add.css" in file.readText(), "custom styles not added to html file ${file.name}")
+            if (file.name != "navigation.html") assertTrue(
+                "custom-style-to-add.css" in file.readText(),
+                "custom styles not added to html file ${file.name}"
+            )
         }
         assertTrue(imagesDir.resolve("custom-resource.svg").isFile)
     }

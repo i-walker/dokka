@@ -5,9 +5,13 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.kotlin.dsl.register
+import org.gradle.util.GradleVersion
 
 open class DokkaPlugin : Plugin<Project> {
     override fun apply(project: Project) {
+        if (GradleVersion.version(project.gradle.gradleVersion) < GradleVersion.version("5.6")) {
+            project.logger.warn("Dokka: Build is using unsupported gradle version, expected at least 5.6 but got ${project.gradle.gradleVersion}. This may result in strange errors")
+        }
 
         project.setupDokkaTasks("dokkaHtml") {
             description = "Generates documentation in 'html' format"
@@ -26,7 +30,7 @@ open class DokkaPlugin : Plugin<Project> {
             description = "Generates documentation in GitHub flavored markdown format"
         }
 
-        project.setupDokkaTasks("dokkaJekyll", allModulesPageAndTemplateProcessing = project.dokkaArtifacts.gfmTemplateProcessing) {
+        project.setupDokkaTasks("dokkaJekyll", allModulesPageAndTemplateProcessing = project.dokkaArtifacts.jekyllTemplateProcessing) {
             plugins.dependencies.add(project.dokkaArtifacts.jekyllPlugin)
             description = "Generates documentation in Jekyll flavored markdown format"
         }
@@ -61,14 +65,13 @@ open class DokkaPlugin : Plugin<Project> {
         if (project.subprojects.isNotEmpty()) {
             if (multiModuleTaskSupported) {
                 val multiModuleName = "${name}MultiModule"
-                project.maybeCreateDokkaPluginConfiguration(multiModuleName)
+                project.maybeCreateDokkaPluginConfiguration(multiModuleName, setOf(allModulesPageAndTemplateProcessing))
                 project.maybeCreateDokkaRuntimeConfiguration(multiModuleName)
 
                 project.tasks.register<DokkaMultiModuleTask>(multiModuleName) {
                     addSubprojectChildTasks("${name}Partial")
                     configuration()
                     description = "Runs all subprojects '$name' tasks and generates module navigation page"
-                    plugins.dependencies.add(allModulesPageAndTemplateProcessing)
                 }
 
                 project.tasks.register<DefaultTask>("${name}Multimodule") {

@@ -14,7 +14,7 @@ Dokka supports the following command line arguments:
   * `-moduleName` - (required) - module name used as a part of source set ID when declaring dependent source sets
   * `-cacheRoot` - cache directory to enable package-list caching
   * `-pluginsClasspath` - artifacts with Dokka plugins, separated by `;`. At least `dokka-base` and all its dependencies must be added there 
-  * `-pluginsConfiguration` - configuration for plugins in format fqPluginName=json^^fqPluginName=json...
+  * `-pluginsConfiguration` - configuration for plugins in format `fqPluginName=json^^fqPluginName=json...`
   * `-offlineMode` - do not resolve package-lists online
   * `-failOnWarning` - throw an exception instead of a warning
   * `-globalPackageOptions` - per package options added to all source sets
@@ -41,6 +41,8 @@ Dokka supports the following command line arguments:
     * `-jdkVersion` - version of JDK to use for linking to JDK JavaDoc
     * `-analysisPlatform` - platform used for analysis, see the [Platforms](#platforms) section
     * `-dependentSourceSets` - list of dependent source sets in format `moduleName/sourceSetName`, separated by `;`
+  * `-loggingLevel` - one of `DEBUG`, `PROGRESS`, `INFO`, `WARN`, `ERROR`. Defaults to `DEBUG`. Please note that this argument can't be passed in JSON.
+
 
 You can also use a JSON file with Dokka configuration:
  ```

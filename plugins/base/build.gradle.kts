@@ -1,16 +1,16 @@
 import org.jetbrains.registerDokkaArtifactPublication
 
-plugins {
-    id("com.jfrog.bintray")
-}
 
 dependencies {
     val coroutines_version: String by project
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version")
 
     api(project(":kotlin-analysis"))
-    implementation("org.jsoup:jsoup:1.13.1")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.11.1")
+    val jsoup_version: String by project
+    implementation("org.jsoup:jsoup:$jsoup_version")
+
+    val jackson_version: String by project
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
     testImplementation(project(":plugins:base:base-test-utils"))
     testImplementation(project(":core:content-matcher-test-utils"))
 
@@ -44,6 +44,10 @@ val copyFrontend by tasks.registering {
 tasks {
     processResources {
         dependsOn(copyFrontend)
+    }
+
+    sourcesJar {
+        dependsOn(processResources)
     }
 
     test {

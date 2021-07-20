@@ -26,11 +26,7 @@ open class CommonmarkRenderer(
         childrenCallback: StringBuilder.() -> Unit
     ) {
         return when {
-            node.hasStyle(TextStyle.Block) -> {
-                childrenCallback()
-                buildNewLine()
-            }
-            node.hasStyle(TextStyle.Paragraph) -> {
+            node.hasStyle(TextStyle.Block) || node.hasStyle(TextStyle.Paragraph) -> {
                 buildParagraph()
                 childrenCallback()
                 buildParagraph()
@@ -43,7 +39,7 @@ open class CommonmarkRenderer(
         buildParagraph()
         append("#".repeat(level) + " ")
         content()
-        buildNewLine()
+        buildParagraph()
     }
 
     override fun StringBuilder.buildLink(address: String, content: StringBuilder.() -> Unit) {
@@ -57,7 +53,9 @@ open class CommonmarkRenderer(
         pageContext: ContentPage,
         sourceSetRestriction: Set<DisplaySourceSet>?
     ) {
+        buildParagraph()
         buildListLevel(node, pageContext)
+        buildParagraph()
     }
 
     private fun StringBuilder.buildListItem(items: List<ContentNode>, pageContext: ContentPage) {
@@ -100,12 +98,18 @@ open class CommonmarkRenderer(
         } else buildText(node.children, pageContext, sourceSetRestriction)
     }
 
-    override fun StringBuilder.buildNewLine() {
-        append("  \n")
+    override fun StringBuilder.buildLineBreak() {
+        append("\\")
+        buildNewLine()
+    }
+
+    private fun StringBuilder.buildNewLine() {
+        append("\n")
     }
 
     private fun StringBuilder.buildParagraph() {
-        append("\n\n")
+        buildNewLine()
+        buildNewLine()
     }
 
     override fun StringBuilder.buildPlatformDependent(
@@ -129,10 +133,11 @@ open class CommonmarkRenderer(
             }.groupBy(Pair<DisplaySourceSet, String>::second, Pair<DisplaySourceSet, String>::first)
 
             distinct.filter { it.key.isNotBlank() }.forEach { (text, platforms) ->
-                append(" ")
+                buildParagraph()
                 buildSourceSetTags(platforms.toSet())
-                append(" $text ")
-                buildNewLine()
+                buildLineBreak()
+                append(text.trim())
+                buildParagraph()
             }
         }
     }
@@ -164,46 +169,48 @@ open class CommonmarkRenderer(
             }
         } else {
             val size = node.header.firstOrNull()?.children?.size ?: node.children.firstOrNull()?.children?.size ?: 0
+            if (size <= 0) return
 
             if (node.header.isNotEmpty()) {
                 node.header.forEach {
-                    append("| ")
                     it.children.forEach {
-                        append(" ")
+                        append("| ")
                         it.build(this, pageContext, it.sourceSets)
-                        append(" | ")
+                        append(" ")
                     }
-                    append("\n")
                 }
             } else {
                 append("| ".repeat(size))
-                if (size > 0) append("|\n")
             }
+            append("|")
+            buildNewLine()
 
             append("|---".repeat(size))
-            if (size > 0) append("|\n")
+            append("|")
+            buildNewLine()
 
-            node.children.forEach {
-                val builder = StringBuilder()
-                it.children.forEach {
-                    builder.append("| ")
-                    builder.append("<a name=\"${it.dci.dri.first()}\"></a>")
-                    builder.append(
-                        buildString { it.build(this, pageContext) }.replace(
-                            Regex("#+ "),
-                            ""
-                        )
-                    )  // Workaround for headers inside tables
+            node.children.forEach { row ->
+                row.children.forEach { cell ->
+                    append("| ")
+                    append(buildString { cell.build(this, pageContext) }
+                        .trim()
+                        .replace("#+ ".toRegex(), "") // Workaround for headers inside tables
+                        .replace("\\\n", "\n\n")
+                        .replace("\n[\n]+".toRegex(), "<br>")
+                        .replace("\n", " ")
+                    )
+                    append(" ")
                 }
-                append(builder.toString().withEntersAsHtml())
-                append("|".repeat(size + 1 - it.children.size))
-                append("\n")
+                append("|")
+                buildNewLine()
             }
         }
     }
 
     override fun StringBuilder.buildText(textNode: ContentText) {
-        if (textNode.text.isNotBlank()) {
+        if (textNode.extra[HtmlContent] != null) {
+            append(textNode.text)
+        } else if (textNode.text.isNotBlank()) {
             val decorators = decorators(textNode.style)
             append(textNode.text.takeWhile { it == ' ' })
             append(decorators)
@@ -225,7 +232,7 @@ open class CommonmarkRenderer(
     override fun buildPage(page: ContentPage, content: (StringBuilder, ContentPage) -> Unit): String =
         buildString {
             content(this, page)
-        }
+        }.trim().replace("\n[\n]+".toRegex(), "\n\n")
 
     override fun buildError(node: ContentNode) {
         context.logger.warn("Markdown renderer has encountered problem. The unmatched node is $node")
@@ -247,45 +254,40 @@ open class CommonmarkRenderer(
         distinct.values.forEach { entry ->
             val (instance, sourceSets) = entry.getInstanceAndSourceSets()
 
+            buildParagraph()
             buildSourceSetTags(sourceSets)
-            buildNewLine()
+            buildLineBreak()
+
             instance.before?.let {
-                append("Brief description")
-                buildNewLine()
                 buildContentNode(
                     it,
                     pageContext,
                     sourceSets.first()
                 ) // It's workaround to render content only once
-                buildNewLine()
+                buildParagraph()
             }
 
-            append("Content")
-            buildNewLine()
             entry.groupBy { buildString { buildContentNode(it.first.divergent, pageContext, setOf(it.second)) } }
                 .values.forEach { innerEntry ->
                     val (innerInstance, innerSourceSets) = innerEntry.getInstanceAndSourceSets()
                     if (sourceSets.size > 1) {
                         buildSourceSetTags(innerSourceSets)
-                        buildNewLine()
+                        buildLineBreak()
                     }
                     innerInstance.divergent.build(
                         this@buildDivergent,
                         pageContext,
                         setOf(innerSourceSets.first())
                     ) // It's workaround to render content only once
-                    buildNewLine()
+                    buildParagraph()
                 }
 
             instance.after?.let {
-                append("More info")
-                buildNewLine()
                 buildContentNode(
                     it,
                     pageContext,
                     sourceSets.first()
                 ) // It's workaround to render content only once
-                buildNewLine()
             }
 
             buildParagraph()
@@ -318,12 +320,26 @@ open class CommonmarkRenderer(
                 ?: throw DokkaException("Cannot resolve path for ${page.name}")
         }
 
-        when (page) {
+        return when (page) {
             is ContentPage -> outputWriter.write(path, buildPage(page) { c, p -> buildPageContent(c, p) }, ".md")
             is RendererSpecificPage -> when (val strategy = page.strategy) {
                 is RenderingStrategy.Copy -> outputWriter.writeResources(strategy.from, path)
                 is RenderingStrategy.Write -> outputWriter.write(path, strategy.text, "")
                 is RenderingStrategy.Callback -> outputWriter.write(path, strategy.instructions(this, page), ".md")
+                is RenderingStrategy.DriLocationResolvableWrite -> outputWriter.write(
+                        path,
+                        strategy.contentToResolve { dri, sourcesets ->
+                            locationProvider.resolve(dri, sourcesets)
+                        },
+                        ""
+                )
+                is RenderingStrategy.PageLocationResolvableWrite -> outputWriter.write(
+                        path,
+                        strategy.contentToResolve { pageToLocate, context ->
+                            locationProvider.resolve(pageToLocate, context)
+                        },
+                        ""
+                )
                 RenderingStrategy.DoNothing -> Unit
             }
             else -> throw AssertionError(
@@ -331,8 +347,6 @@ open class CommonmarkRenderer(
             )
         }
     }
-
-    private fun String.withEntersAsHtml(): String = replace("\n", "<br>")
 
     private fun List<Pair<ContentDivergentInstance, DisplaySourceSet>>.getInstanceAndSourceSets() =
         this.let { Pair(it.first().first, it.map { it.second }.toSet()) }

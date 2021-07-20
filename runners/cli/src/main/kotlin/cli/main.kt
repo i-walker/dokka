@@ -3,6 +3,8 @@ package org.jetbrains.dokka
 import kotlinx.cli.*
 import org.jetbrains.dokka.DokkaConfiguration.ExternalDocumentationLink
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
+import org.jetbrains.dokka.utilities.DokkaLogger
+import org.jetbrains.dokka.utilities.LoggingLevel
 import org.jetbrains.dokka.utilities.cast
 import java.io.*
 import java.net.MalformedURLException
@@ -74,7 +76,7 @@ class GlobalArguments(args: Array<String>) : DokkaConfiguration {
         description = "Document generated or obvious functions like default `toString` or `equals`"
     ).default(!DokkaDefaults.suppressObviousFunctions)
 
-    override val suppressObviousFunctions: Boolean by lazy{ !noSuppressObviousFunctions }
+    override val suppressObviousFunctions: Boolean by lazy { !noSuppressObviousFunctions }
 
     private val _includes by parser.option(
         ArgTypeFile,
@@ -108,7 +110,27 @@ class GlobalArguments(args: Array<String>) : DokkaConfiguration {
         description = "Prints help for single -sourceSet"
     )
 
+    val loggingLevel by parser.option(
+        ArgType.Choice(toVariant = {
+            when (it.toUpperCase().trim()) {
+                "DEBUG", "" -> LoggingLevel.DEBUG
+                "PROGRESS" -> LoggingLevel.PROGRESS
+                "INFO" -> LoggingLevel.INFO
+                "WARN" -> LoggingLevel.WARN
+                "ERROR" -> LoggingLevel.ERROR
+                else -> {
+                    println("""Failed to deserialize logging level, got $it expected one of "DEBUG", "PROGRESS", "INFO", "WARN", "ERROR", falling back to DEBUG""")
+                    LoggingLevel.DEBUG
+                }
+            }
+        }, toString = { it.toString() }
+        )).default(LoggingLevel.DEBUG)
+
     override val modules: List<DokkaConfiguration.DokkaModuleDescription> = emptyList()
+
+    val logger: DokkaLogger by lazy {
+        DokkaConsoleLogger(loggingLevel)
+    }
 
     init {
         parser.parse(args)
@@ -129,7 +151,7 @@ class GlobalArguments(args: Array<String>) : DokkaConfiguration {
                         .add(SourceLinkDefinitionImpl.parseSourceLinkDefinition(it))
                 }
             else {
-                DokkaConsoleLogger.warn("Invalid -srcLink syntax. Expected: <path>=<url>[#lineSuffix]. No source links will be generated.")
+                logger.warn("Invalid -srcLink syntax. Expected: <path>=<url>[#lineSuffix]. No source links will be generated.")
             }
         }
 
@@ -316,7 +338,13 @@ object ArgTypeSourceLinkDefinition : ArgType<DokkaConfiguration.SourceLinkDefini
 data class ArgTypeArgument(val moduleName: CLIEntity<kotlin.String>) :
     ArgType<DokkaConfiguration.DokkaSourceSet>(true) {
     override fun convert(value: kotlin.String, name: kotlin.String): DokkaConfiguration.DokkaSourceSet =
-        parseSourceSet(moduleName.value, value.split(" ").filter { it.isNotBlank() }.toTypedArray())
+        (if (moduleName.valueOrigin != ArgParser.ValueOrigin.UNSET && moduleName.valueOrigin != ArgParser.ValueOrigin.UNDEFINED) {
+            moduleName.value
+        } else {
+            DokkaDefaults.moduleName
+        }).let { moduleNameOrDefault ->
+            parseSourceSet(moduleNameOrDefault, value.split(" ").filter { it.isNotBlank() }.toTypedArray())
+        }
 
     override val description: kotlin.String
         get() = ""
@@ -372,6 +400,6 @@ fun main(args: Array<String>) {
         )
     else
         globalArguments
-    DokkaGenerator(configuration, DokkaConsoleLogger).generate()
+    DokkaGenerator(configuration, globalArguments.logger).generate()
 }
 
